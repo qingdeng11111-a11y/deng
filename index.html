@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>LabCSV Check · 实验数据检查与交付</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="core.js"></script><script defer src="zip.js"></script><script defer src="package.js"></script><script defer src="app.js"></script>
+</head>
+<body>
+  <header><a class="brand" href="index.html">LabCSV<span> / CHECK</span></a><span class="badge">本地处理 · 无需安装 · v0.1.0</span></header>
+  <main>
+    <section class="intro"><p class="eyebrow">让实验数据更容易交接</p><h1>先检查，再交付。</h1><p>找出 CSV 里的缺值、时间异常与超限测量，保留原始数据和检查依据。<br>不上传文件，不自动删除、补值或排序。</p></section>
+    <div class="layout">
+      <aside>
+        <section class="card"><h2><span class="step">01</span> 选择数据</h2>
+          <label class="upload" for="file">选择 CSV / TSV 文件<small>UTF-8 · 最多 5 MiB / 50,000 条记录</small></label>
+          <input id="file" type="file" accept=".csv,.tsv,.txt">
+          <p id="filename" class="muted">还没有选择文件</p>
+          <button id="demo" class="secondary" type="button">先试试内置问题样本</button>
+          <label for="delimiter">分隔符</label><select id="delimiter"><option value=",">逗号 ,</option><option value=";">分号 ;</option><option value="tab">制表符 Tab</option></select>
+        </section>
+        <section class="card"><h2><span class="step">02</span> 确认规则</h2>
+          <fieldset id="settings" disabled>
+            <div class="pair"><div><label for="timeColumn">时间列</label><select id="timeColumn"></select></div><div><label for="timeUnit">原时间单位</label><select id="timeUnit"><option value="s">秒 s</option><option value="ms">毫秒 ms</option><option value="min">分钟 min</option></select></div></div>
+            <label for="valueColumn">测量值列</label><select id="valueColumn"></select>
+            <div class="pair"><div><label for="fromUnit">原测量单位</label><select id="fromUnit"></select></div><div><label for="toUnit">输出单位</label><select id="toUnit"></select></div></div>
+            <label for="interval">期望采样间隔（秒，可留空）</label><input id="interval" inputmode="decimal" placeholder="例如 1；留空不检查间隔">
+            <div class="pair"><div><label for="minimum">下限（输出单位）</label><input id="minimum" inputmode="decimal" placeholder="可留空"></div><div><label for="maximum">上限（输出单位）</label><input id="maximum" inputmode="decimal" placeholder="可留空"></div></div>
+            <p class="hint">时间必须是数值型相对时间；单位由你确认。温度转换仅适用于绝对温度，不适用于温差。</p>
+            <button id="run" type="button">开始检查 <span aria-hidden="true">→</span></button>
+          </fieldset>
+        </section>
+      </aside>
+      <div class="workspace">
+        <div id="notice" role="status" aria-live="polite">点击左侧示例按钮，先看一份带有已知问题的数据。</div>
+        <section class="card"><div class="section-top"><h2>数据预览</h2><span id="previewCount" class="muted">等待导入</span></div><div id="preview" class="table-wrap"><div class="empty">你的原始数据会显示在这里。<br><small>检查与换算只针对所选的两列。</small></div></div></section>
+        <section class="card" id="results"><div class="section-top"><h2><span class="step">03</span> 检查结果</h2><button id="export" type="button" disabled>导出交付 ZIP</button></div>
+          <div id="summary" class="stats"><div><strong>—</strong><span>数据记录</span></div><div><strong>—</strong><span>错误</span></div><div><strong>—</strong><span>待复核</span></div><div><strong>—</strong><span>涉及记录</span></div></div>
+          <div id="issues" class="table-wrap"><div class="empty">确认规则后点击「开始检查」。</div></div>
+          <p class="hint">记录号从表头后的第一条数据开始。提示不代表数据一定错误；零问题也不代表实验正确。页面最多显示 200 个问题，交付包保留全部结果。</p>
+        </section>
+        <details class="card"><summary>交付包里有什么？如何使用？</summary><p>original.csv 保留原文件字节；normalized.csv 输出选定两列的换算结果；report.html 可直接阅读；report.json、config.json 和 manifest.json 记录全部问题、配置及哈希。verify.cjs 可用 Node.js 22+ 重跑核验。</p><p>不会过滤异常记录。无法换算的值在 normalized.csv 中留空，并有问题代码；其他原始列仍在 original.csv。分享 ZIP 前请确认原文件没有敏感内容。完整说明见 README.md。</p></details>
+      </div>
+    </div>
+  </main><footer>开源实验原型 · 检查有依据，处理留记录。<span>纯静态文件，无 CDN、遥测或在线模型。</span></footer>
+</body></html>
