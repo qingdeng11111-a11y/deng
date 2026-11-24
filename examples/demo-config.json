@@ -1,0 +1,11 @@
+{
+  "delimiter": ",",
+  "timeColumn": 0,
+  "valueColumn": 1,
+  "timeUnit": "ms",
+  "fromUnit": "mV",
+  "toUnit": "V",
+  "expectedInterval": 1,
+  "minimum": 0,
+  "maximum": 5
+}
