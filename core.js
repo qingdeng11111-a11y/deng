@@ -3,7 +3,7 @@
   'use strict';
   function createLabCSV() {
     'use strict';
-    const VERSION = '0.1.0';
+    const VERSION = '0.1.1';
     const MAX_BYTES = 5 * 1024 * 1024;
     const MAX_ROWS = 50000;
     const units = {
@@ -17,11 +17,15 @@
     };
     const times = {s: 1, ms: 0.001, min: 60};
     const own = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+    function underflows(value) {
+      const s = String(value).trim();
+      return Number(s) === 0 && /[1-9]/.test(s.split(/e/i)[0]);
+    }
     function number(value) {
       const s = String(value).trim();
       if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(s)) return null;
       const n = Number(s);
-      return Number.isFinite(n) ? n : null;
+      return Number.isFinite(n) && !underflows(s) ? n : null;
     }
     function decode(bytes) {
       if (bytes.byteLength > MAX_BYTES) throw new Error('文件超过 5 MiB，请先拆分。');
@@ -92,6 +96,7 @@
       if (!own(units, from) || !own(units, to) || units[from][0] !== units[to][0]) throw new Error('单位不兼容。');
       if (from === to) return n;
       const a = units[from], b = units[to];
+      if (a[2] === 0 && b[2] === 0) return n * (a[1] / b[1]);
       return (n * a[1] + a[2] - b[2]) / b[1];
     }
     function analyze(data, config) {
@@ -108,10 +113,12 @@
           for (const [col, label] of [[c.timeColumn, '时间'], [c.valueColumn, '测量值']]) {
             const raw = row[col], n = number(raw);
             if (!raw.trim()) add(record, 'error', 'MISSING', `${label}为空。`, col);
-            else if (n === null) add(record, 'error', 'NOT_NUMBER', `${label}不是有限十进制数。`, col);
+            else if (n === null) add(record, 'error', underflows(raw) ? 'UNDERFLOW' : 'NOT_NUMBER', `${label}不是可表示的有限十进制数（可能下溢为零）。`, col);
             else {
               const out = col === c.timeColumn ? n * times[c.timeUnit] : convert(n, c.fromUnit, c.toUnit);
               if (!Number.isFinite(out)) add(record, 'error', 'OVERFLOW', `${label}换算后溢出。`, col);
+              else if (out === 0 && n !== 0 && (col === c.timeColumn || (units[c.fromUnit][2] === 0 && units[c.toUnit][2] === 0)))
+                add(record, 'error', 'UNDERFLOW', `${label}换算后下溢为零；本值不输出。`, col);
               else if (col === c.timeColumn) t = out;
               else v = out;
             }
@@ -124,10 +131,13 @@
           else seen.set(t, record);
           if (previous !== null) {
             const delta = t - previous;
+            const roundoff = 2 * Number.EPSILON * Math.max(Math.abs(t), Math.abs(previous));
+            if (c.expectedInterval !== null && roundoff >= c.expectedInterval * 0.05)
+              add(record, 'warning', 'TIME_PRECISION', '时间数值过大，相对于期望间隔的浮点精度不足；请从仪器原始数据生成相对时间。', c.timeColumn);
             if (delta < 0) add(record, 'warning', 'TIME_BACKWARDS', `时间早于第 ${previousRecord} 条数据记录。`, c.timeColumn);
             if (delta > 0 && c.expectedInterval !== null) {
               const difference = Math.abs(delta - c.expectedInterval);
-              const tolerance = c.expectedInterval * 0.05 + 1e-10 * Math.max(1, Math.abs(t), Math.abs(previous));
+              const tolerance = c.expectedInterval * 0.05 + Math.min(roundoff, c.expectedInterval * 0.005);
               if (difference > tolerance) {
                 const gap = delta > c.expectedInterval * 1.5;
                 add(record, 'warning', gap ? 'TIME_GAP' : 'IRREGULAR_INTERVAL',

@@ -9,7 +9,7 @@
   <script defer src="core.js"></script><script defer src="zip.js"></script><script defer src="package.js"></script><script defer src="app.js"></script>
 </head>
 <body>
-  <header><a class="brand" href="index.html">LabCSV<span> / CHECK</span></a><span class="badge">本地处理 · 无需安装 · v0.1.0</span></header>
+  <header><a class="brand" href="index.html">LabCSV<span> / CHECK</span></a><span class="badge">本地处理 · 无需安装 · v0.1.1</span></header>
   <main>
     <section class="intro"><p class="eyebrow">让实验数据更容易交接</p><h1>先检查，再交付。</h1><p>找出 CSV 里的缺值、时间异常与超限测量，保留原始数据和检查依据。<br>不上传文件，不自动删除、补值或排序。</p></section>
     <div class="layout">
@@ -23,7 +23,7 @@
         </section>
         <section class="card"><h2><span class="step">02</span> 确认规则</h2>
           <fieldset id="settings" disabled>
-            <div class="pair"><div><label for="timeColumn">时间列</label><select id="timeColumn"></select></div><div><label for="timeUnit">原时间单位</label><select id="timeUnit"><option value="s">秒 s</option><option value="ms">毫秒 ms</option><option value="min">分钟 min</option></select></div></div>
+            <div class="pair"><div><label for="timeColumn">时间列</label><select id="timeColumn"></select></div><div><label for="timeUnit">原时间单位</label><select id="timeUnit"><option value="">请选择真实单位</option><option value="s">秒 s</option><option value="ms">毫秒 ms</option><option value="min">分钟 min</option></select></div></div>
             <label for="valueColumn">测量值列</label><select id="valueColumn"></select>
             <div class="pair"><div><label for="fromUnit">原测量单位</label><select id="fromUnit"></select></div><div><label for="toUnit">输出单位</label><select id="toUnit"></select></div></div>
             <label for="interval">期望采样间隔（秒，可留空）</label><input id="interval" inputmode="decimal" placeholder="例如 1；留空不检查间隔">

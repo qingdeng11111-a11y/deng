@@ -28,6 +28,7 @@
   }
   function parse() {
     invalidate(); data = null; $('settings').disabled = true;
+    $('timeUnit').value = ''; $('fromUnit').value = ''; updateTargets('');
     try {
       data = C.parseCSV(C.decode(bytes), delimiter());
       const columns = data.headers.map((h, i) => [String(i), `${i + 1}. ${h}`]);
@@ -59,7 +60,7 @@
       if (generation !== token) return;
       bytes = new Uint8Array(buffer);
       $('delimiter').value = /\.tsv$/i.test(filename) ? 'tab' : ',';
-      $('timeUnit').value = 's'; $('fromUnit').value = '1'; updateTargets('1');
+      $('timeUnit').value = ''; $('fromUnit').value = ''; updateTargets('');
       $('interval').value = ''; $('minimum').value = ''; $('maximum').value = '';
       parse();
     } catch (err) { if (generation === token) notice(err.message, true); }
@@ -67,16 +68,18 @@
   $('delimiter').addEventListener('change', () => { generation++; if (bytes) parse(); });
   function updateTargets(preferred) {
     const from = $('fromUnit').value;
+    if (!from) { select('toUnit', [['', '先选择原测量单位']], ''); return; }
     const choices = Object.keys(C.units).filter(u => C.units[u][0] === C.units[from][0]).map(u => [u, u === '1' ? '无量纲 1' : u]);
     select('toUnit', choices, choices.some(([u]) => u === preferred) ? preferred : from);
   }
-  select('fromUnit', Object.keys(C.units).map(u => [u, u === '1' ? '无量纲 1' : u]), '1'); updateTargets('1');
+  select('fromUnit', [['', '请选择真实单位'], ...Object.keys(C.units).map(u => [u, u === '1' ? '无量纲 1' : u])], ''); updateTargets('');
   $('fromUnit').addEventListener('change', () => updateTargets($('toUnit').value));
   $('settings').addEventListener('input', () => { generation++; invalidate(); notice('规则已更改，旧结果已失效。请重新检查。'); });
   $('run').addEventListener('click', () => {
     if (!data) return;
     invalidate();
     try {
+      if (!$('timeUnit').value || !$('fromUnit').value) throw new Error('请先明确选择原时间单位和原测量单位；不会使用默认单位。');
       result = C.analyze(data, {delimiter: delimiter(), timeColumn: Number($('timeColumn').value), valueColumn: Number($('valueColumn').value),
         timeUnit: $('timeUnit').value, fromUnit: $('fromUnit').value, toUnit: $('toUnit').value,
         expectedInterval: $('interval').value, minimum: $('minimum').value, maximum: $('maximum').value});
