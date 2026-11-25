@@ -10,6 +10,40 @@ const Z = require('../zip.js');
 const P = require('../package.js');
 const config = {delimiter: ',', timeColumn: 0, valueColumn: 1, timeUnit: 's', fromUnit: 'mV', toUnit: 'V', expectedInterval: null, minimum: null, maximum: null};
 const run = (text, changes = {}) => C.analyze(C.parseCSV(text, changes.delimiter || ','), {...config, ...changes});
+test('nonzero decimals that round to zero are rejected while actual zero is preserved', () => {
+  for (const value of ['1e-999', '-1e-999', '.0001e-999']) assert.equal(C.number(value), null);
+  assert.equal(C.number('0e-999'), 0);
+  assert.equal(C.number('5e-324'), Number.MIN_VALUE);
+  const r = run('t,v\n0,1e-999');
+  assert.equal(r.issues[0].code, 'UNDERFLOW');
+  assert.equal(r.normalized[0].value, null);
+});
+test('unit conversion underflow does not silently emit a zero', () => {
+  const r = run('t,v\n5e-324,5e-324', {timeUnit:'ms'});
+  assert.deepEqual(r.issues.map(x=>x.code), ['UNDERFLOW','UNDERFLOW']);
+  assert.equal(r.normalized[0].time_s, null);
+  assert.equal(r.normalized[0].value, null);
+});
+test('scale conversion avoids unnecessary intermediate underflow and overflow', () => {
+  assert.ok(C.convert(5e-324, 'mm', 'cm') === 0);
+  assert.equal(C.convert(1e308, 'MPa', 'kPa'), Infinity);
+  assert.equal(C.convert(1e308, 'kPa', 'MPa'), 1e305);
+  assert.ok(C.convert(5e-323, 'mm', 'cm') > 0);
+  assert.equal(run('t,v\n0,0',{fromUnit:'°C',toUnit:'°C'}).summary.errors,0);
+  assert.equal(run('t,v\n0,273.15',{fromUnit:'K',toUnit:'°C'}).normalized[0].value,0);
+});
+test('large time origin does not hide a tenfold sampling gap', () => {
+  const r=run('t,v\n1000000000000,1\n1000000000010,1',{expectedInterval:1});
+  assert.ok(r.issues.some(x=>x.code==='TIME_GAP'));
+});
+test('insufficient time precision is explicit even when rounded timestamps coincide', () => {
+  const r=run('t,v\n10000000000000000,1\n10000000000000001,1',{expectedInterval:1});
+  assert.ok(r.issues.some(x=>x.code==='TIME_PRECISION'));
+  assert.ok(r.issues.some(x=>x.code==='DUPLICATE_TIME'));
+});
+test('blank unit choices cannot reach the calculation engine', () => {
+  for (const changes of [{timeUnit:''},{fromUnit:''},{toUnit:''}]) assert.throws(()=>run('t,v\n0,1',changes));
+});
 test('quoted comma, escaped quote, BOM, multiline and CRLF preserve values', () => {
   const d = C.parseCSV('\uFEFFt,v,n\r\n0,1,"x,y"\r\n1,2,"a""b\r\nc"\r\n');
   assert.deepEqual(d.rows, [['0','1','x,y'], ['1','2','a"b\r\nc']]);
